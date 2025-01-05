@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import { getDatabase, ref, onValue, push } from 'firebase/database'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { v4 as uuidv4 } from 'uuid'
 import CustomMarker from './Marker'
 import InfoWindow from './InfoWindow'
 import SearchBox from './SearchBox'
 import CategoryList from './CategoryList'
 import AddFacilityModal from '../UI/AddFacilityModal'
+import AdminLogin from '../Auth/AdminLogin'
 import type { Facility, Location } from '@/types'
 import { database } from '@/lib/firebase'
 
@@ -29,6 +31,7 @@ export default function Map() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [mapCenter, setMapCenter] = useState(defaultCenter)
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -37,6 +40,7 @@ export default function Map() {
   })
 
   useEffect(() => {
+    // 시설 데이터 가져오기
     const facilitiesRef = ref(database, 'facilities')
     const unsubscribe = onValue(facilitiesRef, (snapshot) => {
       const data = snapshot.val()
@@ -46,7 +50,16 @@ export default function Map() {
       }
     })
 
-    return () => unsubscribe()
+    // 관리자 상태 확인
+    const auth = getAuth()
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAdmin(!!user)
+    })
+
+    return () => {
+      unsubscribe()
+      authUnsubscribe()
+    }
   }, [])
 
   const handlePlacesChanged = useCallback((location: google.maps.LatLng) => {
@@ -71,6 +84,7 @@ export default function Map() {
   }
 
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (!isAdmin) return // 관리자가 아니면 클릭 무시
     if (!e.latLng) return
     
     const newLocation = {
@@ -102,6 +116,7 @@ export default function Map() {
 
   return (
     <div className="relative w-full h-full">
+      <AdminLogin isAdmin={isAdmin} />
       <SearchBox onPlacesChanged={handlePlacesChanged} />
       <CategoryList 
         facilities={facilities} 
@@ -138,14 +153,16 @@ export default function Map() {
         )}
       </GoogleMap>
 
-      <AddFacilityModal
-        isOpen={isAddModalOpen}
-        onClose={() => {
-          setIsAddModalOpen(false)
-          setClickedLocation(null)
-        }}
-        onSubmit={handleAddFacility}
-      />
+      {isAdmin && (
+        <AddFacilityModal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false)
+            setClickedLocation(null)
+          }}
+          onSubmit={handleAddFacility}
+        />
+      )}
     </div>
   )
 }
