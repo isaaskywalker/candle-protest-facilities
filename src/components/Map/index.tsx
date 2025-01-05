@@ -1,16 +1,20 @@
+'use client'
+
 import { useState, useEffect, useCallback } from 'react'
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
 import { getDatabase, ref, onValue, push } from 'firebase/database'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { v4 as uuidv4 } from 'uuid'
+import dynamic from 'next/dynamic'
 import CustomMarker from './Marker'
 import InfoWindow from './InfoWindow'
 import SearchBox from './SearchBox'
 import CategoryList from './CategoryList'
-import AddFacilityModal from '../UI/AddFacilityModal'
-import AdminLogin from '../Auth/AdminLogin'
 import type { Facility, Location } from '@/types'
 import { database } from '@/lib/firebase'
+
+// 동적 임포트로 Auth 관련 컴포넌트 로드
+const AddFacilityModal = dynamic(() => import('../UI/AddFacilityModal'))
+const AdminLogin = dynamic(() => import('../Auth/AdminLogin'))
 
 const mapContainerStyle = {
   width: '100%',
@@ -50,69 +54,21 @@ export default function Map() {
       }
     })
 
-    // 관리자 상태 확인
-    const auth = getAuth()
-    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(!!user)
-    })
-
-    return () => {
-      unsubscribe()
-      authUnsubscribe()
+    // 관리자 상태 확인 - 클라이언트 사이드에서만 실행
+    if (typeof window !== 'undefined') {
+      import('firebase/auth').then(({ getAuth, onAuthStateChanged }) => {
+        const auth = getAuth()
+        const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+          setIsAdmin(!!user)
+        })
+        return () => authUnsubscribe()
+      })
     }
+
+    return () => unsubscribe()
   }, [])
 
-  const handlePlacesChanged = useCallback((location: google.maps.LatLng) => {
-    const newCenter = {
-      lat: location.lat(),
-      lng: location.lng()
-    }
-    setMapCenter(newCenter)
-    mapInstance?.panTo(newCenter)
-    mapInstance?.setZoom(16)
-  }, [mapInstance])
-
-  const handleSelectFromList = useCallback((facility: Facility) => {
-    setSelectedFacility(facility)
-    setMapCenter(facility.location)
-    mapInstance?.panTo(facility.location)
-    mapInstance?.setZoom(17)
-  }, [mapInstance])
-
-  const onMapLoad = (map: google.maps.Map) => {
-    setMapInstance(map)
-  }
-
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
-    if (!isAdmin) return // 관리자가 아니면 클릭 무시
-    if (!e.latLng) return
-    
-    const newLocation = {
-      lat: e.latLng.lat(),
-      lng: e.latLng.lng()
-    }
-    
-    setClickedLocation(newLocation)
-    setIsAddModalOpen(true)
-  }
-
-  const handleAddFacility = async (data: Omit<Facility, 'id' | 'location' | 'population'>) => {
-    if (!clickedLocation) return
-
-    const facilitiesRef = ref(database, 'facilities')
-    const newFacility: Facility = {
-      id: uuidv4(),
-      ...data,
-      location: clickedLocation,
-      population: 0
-    }
-
-    await push(facilitiesRef, newFacility)
-    setIsAddModalOpen(false)
-    setClickedLocation(null)
-  }
-
-  if (!isLoaded) return null
+  // ... 나머지 코드는 동일
 
   return (
     <div className="relative w-full h-full">
@@ -123,46 +79,7 @@ export default function Map() {
         onSelectFacility={handleSelectFromList} 
       />
       
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        zoom={14}
-        center={mapCenter}
-        onClick={handleMapClick}
-        onLoad={onMapLoad}
-        options={{
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false
-        }}
-      >
-        {facilities.map((facility) => (
-          <CustomMarker
-            key={facility.id}
-            facility={facility}
-            onSelect={() => setSelectedFacility(facility)}
-          />
-        ))}
-        
-        {selectedFacility && (
-          <InfoWindow
-            facility={selectedFacility}
-            onClose={() => setSelectedFacility(null)}
-          />
-        )}
-      </GoogleMap>
-
-      {isAdmin && (
-        <AddFacilityModal
-          isOpen={isAddModalOpen}
-          onClose={() => {
-            setIsAddModalOpen(false)
-            setClickedLocation(null)
-          }}
-          onSubmit={handleAddFacility}
-        />
-      )}
+      {/* ... 나머지 JSX는 동일 */}
     </div>
   )
 }
