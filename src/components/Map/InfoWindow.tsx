@@ -1,6 +1,3 @@
-# src/components/Map/InfoWindow.tsx
-'use client'
-
 import { InfoWindow as GoogleInfoWindow } from '@react-google-maps/api'
 import { getDatabase, ref, update } from 'firebase/database'
 import type { Facility } from '@/types'
