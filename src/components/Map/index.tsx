@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import CustomMarker from './Marker'
 import InfoWindow from './InfoWindow'
 import SearchBox from './SearchBox'
+import CategoryList from './CategoryList'
 import AddFacilityModal from '../UI/AddFacilityModal'
 import type { Facility, Location } from '@/types'
 import { database } from '@/lib/firebase'
@@ -58,8 +59,27 @@ export default function Map() {
     mapInstance?.setZoom(16)
   }, [mapInstance])
 
+  const handleSelectFromList = useCallback((facility: Facility) => {
+    setSelectedFacility(facility)
+    setMapCenter(facility.location)
+    mapInstance?.panTo(facility.location)
+    mapInstance?.setZoom(17)
+  }, [mapInstance])
+
   const onMapLoad = (map: google.maps.Map) => {
     setMapInstance(map)
+  }
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return
+    
+    const newLocation = {
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng()
+    }
+    
+    setClickedLocation(newLocation)
+    setIsAddModalOpen(true)
   }
 
   const handleAddFacility = async (data: Omit<Facility, 'id' | 'location' | 'population'>) => {
@@ -83,19 +103,16 @@ export default function Map() {
   return (
     <div className="relative w-full h-full">
       <SearchBox onPlacesChanged={handlePlacesChanged} />
+      <CategoryList 
+        facilities={facilities} 
+        onSelectFacility={handleSelectFromList} 
+      />
       
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         zoom={14}
         center={mapCenter}
-        onClick={(e) => {
-          if (!e.latLng) return
-          setClickedLocation({
-            lat: e.latLng.lat(),
-            lng: e.latLng.lng()
-          })
-          setIsAddModalOpen(true)
-        }}
+        onClick={handleMapClick}
         onLoad={onMapLoad}
         options={{
           disableDefaultUI: false,
