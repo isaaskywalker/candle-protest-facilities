@@ -1,9 +1,10 @@
+import { getAuth, sendSignInLinkToEmail } from 'firebase/auth';
+
+const auth = getAuth();
+const email = "belleyuri@gmail.com"; // 사용자의 이메일을 명시적으로 설정
+
 const actionCodeSettings = {
-  // URL you want to redirect back to. The domain (www.example.com) for this
-  // URL must be in the authorized domains list in the Firebase Console.
-  url: 'candle-protest-facilities.firebaseapp.com',
-  // This must be true.
-  handleCodeInApp: true,
+  url: `https://www.example.com/?email=${email}`,
   iOS: {
     bundleId: 'com.example.ios'
   },
@@ -12,5 +13,14 @@ const actionCodeSettings = {
     installApp: true,
     minimumVersion: '12'
   },
-  dynamicLinkDomain: 'example.page.link'
+  handleCodeInApp: true,
+  dynamicLinkDomain: "example.page.link"
 };
+
+sendSignInLinkToEmail(auth, email, actionCodeSettings)
+  .then(() => {
+    console.log('이메일 링크가 전송되었습니다.');
+  })
+  .catch((error) => {
+    console.error('오류 발생:', error);
+  });
