@@ -1,4 +1,3 @@
-# src/types/index.ts
 export type FacilityCategory = '화장실' | '음식' | '지하철'
 
 export interface Location {
