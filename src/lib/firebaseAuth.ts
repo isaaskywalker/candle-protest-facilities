@@ -1,18 +1,16 @@
-import { getAuth, sendSignInLinkToEmail } from 'firebase/auth';
-
-export const sendAuthLink = (email: string) => {
-  const auth = getAuth();
-  const actionCodeSettings = {
-    url: 'https://your-app.com/finishSignUp',
-    handleCodeInApp: true,
-  };
-
-  return sendSignInLinkToEmail(auth, email, actionCodeSettings)
-    .then(() => {
-      window.localStorage.setItem('emailForSignIn', email);
-      alert('이메일로 인증 링크를 보냈습니다.');
-    })
-    .catch((error) => {
-      console.error('인증 링크 전송 오류:', error);
-    });
+const actionCodeSettings = {
+  // URL you want to redirect back to. The domain (www.example.com) for this
+  // URL must be in the authorized domains list in the Firebase Console.
+  url: 'candle-protest-facilities.firebaseapp.com',
+  // This must be true.
+  handleCodeInApp: true,
+  iOS: {
+    bundleId: 'com.example.ios'
+  },
+  android: {
+    packageName: 'com.example.android',
+    installApp: true,
+    minimumVersion: '12'
+  },
+  dynamicLinkDomain: 'example.page.link'
 };
