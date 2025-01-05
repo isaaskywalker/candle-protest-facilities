@@ -1,3 +1,4 @@
+// src/lib/firebase.ts
 import { initializeApp, getApps } from 'firebase/app'
 import { getDatabase } from 'firebase/database'
 
@@ -11,10 +12,8 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 }
 
-// Initialize Firebase only if it hasn't been initialized yet
-let firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-
-// Get database instance
+// Initialize Firebase
+const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 const database = getDatabase(firebaseApp)
 
 export { firebaseApp, database }
