@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+.map-container {
+  width: 100%;
+  height: calc(100vh - 4rem);
+}
+
+.info-window {
+  padding: 1rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
