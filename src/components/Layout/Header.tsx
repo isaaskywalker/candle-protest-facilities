@@ -1,78 +1,51 @@
+'use client'
+
 import { useState } from 'react'
 import Link from 'next/link'
 
-interface Category {
-  id: string
-  name: string
-  color: string
-}
-
-const Header = () => {
+export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const categories: Category[] = [
-    { id: 'toilet', name: '화장실', color: 'bg-red-500' },
-    { id: 'food', name: '음식', color: 'bg-green-500' },
-    { id: 'subway', name: '지하철', color: 'bg-blue-500' }
+  const categories = [
+    { name: '화장실', color: 'bg-red-500' },
+    { name: '음식', color: 'bg-green-500' },
+    { name: '지하철', color: 'bg-blue-500' }
   ]
 
   return (
-    <header className="bg-white shadow-sm z-50 relative">
-      <nav className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* 로고 */}
-          <Link 
-            href="/" 
-            className="text-xl font-bold text-gray-900"
-          >
+    <header className="bg-white shadow-md">
+      <nav className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="text-xl font-bold">
             촛불집회 편의시설
           </Link>
-
-          {/* 데스크톱 메뉴 */}
-          <div className="hidden md:flex md:items-center md:space-x-8">
+          
+          <div className="hidden md:flex space-x-4">
             {categories.map((category) => (
-              <div 
-                key={category.id}
-                className="flex items-center space-x-2"
-              >
-                <div 
-                  className={`w-3 h-3 rounded-full ${category.color}`} 
-                  aria-hidden="true"
-                />
-                <span className="text-sm text-gray-700">
-                  {category.name}
-                </span>
+              <div key={category.name} className="flex items-center space-x-1">
+                <div className={`w-3 h-3 rounded-full ${category.color}`}></div>
+                <span>{category.name}</span>
               </div>
             ))}
           </div>
 
-          {/* 모바일 메뉴 버튼 */}
-          <button
-            type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+          <button 
+            className="md:hidden"
             onClick={() => setIsOpen(!isOpen)}
           >
-            <span className="sr-only">메뉴 열기</span>
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth="2" 
+              viewBox="0 0 24 24" 
               stroke="currentColor"
             >
               {isOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path d="M6 18L18 6M6 6l12 12" />
               ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
+                <path d="M4 6h16M4 12h16M4 18h16" />
               )}
             </svg>
           </button>
@@ -80,28 +53,19 @@ const Header = () => {
 
         {/* 모바일 메뉴 */}
         {isOpen && (
-          <div className="md:hidden py-4">
-            <div className="space-y-4">
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center space-x-2 px-2 py-2 rounded-md hover:bg-gray-100"
-                >
-                  <div 
-                    className={`w-3 h-3 rounded-full ${category.color}`}
-                    aria-hidden="true"
-                  />
-                  <span className="text-sm text-gray-700">
-                    {category.name}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className="md:hidden mt-4 space-y-2">
+            {categories.map((category) => (
+              <div 
+                key={category.name} 
+                className="flex items-center space-x-2 p-2"
+              >
+                <div className={`w-3 h-3 rounded-full ${category.color}`}></div>
+                <span>{category.name}</span>
+              </div>
+            ))}
           </div>
         )}
       </nav>
     </header>
   )
 }
-
-export default Header
