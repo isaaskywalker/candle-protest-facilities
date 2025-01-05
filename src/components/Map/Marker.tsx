@@ -1,6 +1,3 @@
-# src/components/Map/Marker.tsx
-'use client'
-
 import { Marker } from '@react-google-maps/api'
 import type { Facility } from '@/types'
 
