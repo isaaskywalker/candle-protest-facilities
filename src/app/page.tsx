@@ -3,13 +3,9 @@
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 
-const MapComponent = dynamic(
-  () => import('@/components/Map'),
-  { 
-    ssr: false,
-    loading: LoadingSpinner
-  }
-)
+const MapComponent = dynamic(() => import('@/components/Map'), { 
+  ssr: false 
+})
 
 function LoadingSpinner() {
   return (
