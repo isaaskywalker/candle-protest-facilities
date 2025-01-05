@@ -1,6 +1,16 @@
-import { useState, useEffect } from 'react'
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api'
-import type { Facility } from '@/types'
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
+import { getDatabase, ref, onValue, push } from 'firebase/database'
+import { v4 as uuidv4 } from 'uuid'
+import CustomMarker from './Marker'
+import InfoWindow from './InfoWindow'
+import SearchBox from './SearchBox'
+import CategoryList from './CategoryList'
+import AddFacilityModal from '../UI/AddFacilityModal'
+import type { Facility, Location } from '@/types'
+import { database } from '@/lib/firebase'
 
 const mapContainerStyle = {
   width: '100%',
@@ -14,42 +24,13 @@ const defaultCenter = {
 
 const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places"]
 
-// 예시 데이터
-const initialFacilities: Facility[] = [
-  {
-    id: '1',
-    name: '시청역 공공화장실',
-    category: '화장실',
-    address: '서울특별시 중구 세종대로 110',
-    location: {
-      lat: 37.5666,
-      lng: 126.9784
-    },
-    population: 0
-  },
-  {
-    id: '2',
-    name: '을지로입구역 화장실',
-    category: '화장실',
-    address: '서울특별시 중구 을지로 42',
-    location: {
-      lat: 37.5660,
-      lng: 126.9821
-    },
-    population: 0
-  }
-]
-
-const markerColors = {
-  '화장실': 'red',
-  '음식': 'green',
-  '지하철': 'blue'
-} as const
-
 export default function Map() {
-  const [facilities, setFacilities] = useState<Facility[]>(initialFacilities)
+  const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
+  const [clickedLocation, setClickedLocation] = useState<Location | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [mapCenter, setMapCenter] = useState(defaultCenter)
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
   const [userLocation, setUserLocation] = useState<google.maps.LatLng | null>(null)
 
   const { isLoaded } = useJsApiLoader({
@@ -59,57 +40,92 @@ export default function Map() {
   })
 
   useEffect(() => {
+    // 시설 데이터 가져오기
+    const facilitiesRef = ref(database, 'facilities')
+    const unsubscribe = onValue(facilitiesRef, (snapshot) => {
+      const data = snapshot.val()
+      if (data) {
+        const facilitiesArray = Object.values(data) as Facility[]
+        setFacilities(facilitiesArray)
+      }
+    })
+
     // 사용자 위치 가져오기
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const newUserLocation = new google.maps.LatLng(
+          setUserLocation(new google.maps.LatLng(
             position.coords.latitude,
             position.coords.longitude
-          )
-          setUserLocation(newUserLocation)
-          setMapCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          })
-        },
-        () => {
-          console.log('위치 정보를 가져올 수 없습니다.')
+          ))
         }
       )
     }
+
+    return () => unsubscribe()
   }, [])
 
-  const handleMarkerClick = (facility: Facility) => {
+  const handlePlacesChanged = useCallback((location: google.maps.LatLng) => {
+    const newCenter = {
+      lat: location.lat(),
+      lng: location.lng()
+    }
+    setMapCenter(newCenter)
+    mapInstance?.panTo(newCenter)
+    mapInstance?.setZoom(16)
+  }, [mapInstance])
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return
+    
+    const newLocation = {
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng()
+    }
+    
+    setClickedLocation(newLocation)
+    setIsAddModalOpen(true)
+  }
+
+  const handleAddFacility = async (data: Omit<Facility, 'id' | 'location' | 'population'>) => {
+    if (!clickedLocation) return
+
+    const facilitiesRef = ref(database, 'facilities')
+    const newFacility: Facility = {
+      id: uuidv4(),
+      ...data,
+      location: clickedLocation,
+      population: 0
+    }
+
+    await push(facilitiesRef, newFacility)
+    setIsAddModalOpen(false)
+    setClickedLocation(null)
+  }
+
+  const handleSelectFromList = useCallback((facility: Facility) => {
     setSelectedFacility(facility)
-  }
+    setMapCenter(facility.location)
+    mapInstance?.panTo(facility.location)
+    mapInstance?.setZoom(17)
+  }, [mapInstance])
 
-  const calculateDistance = (facilityLocation: { lat: number; lng: number }) => {
-    if (!userLocation) return null
-
-    const facilityLatLng = new google.maps.LatLng(
-      facilityLocation.lat,
-      facilityLocation.lng
-    )
-
-    const distance = google.maps.geometry.spherical.computeDistanceBetween(
-      userLocation,
-      facilityLatLng
-    )
-
-    return (distance / 1000).toFixed(1) // km로 변환
-  }
-
-  if (!isLoaded) {
-    return <div>Loading...</div>
-  }
+  if (!isLoaded) return null
 
   return (
     <div className="relative w-full h-full">
+      <SearchBox onPlacesChanged={handlePlacesChanged} />
+      <CategoryList 
+        facilities={facilities} 
+        onSelectFacility={handleSelectFromList} 
+      />
+      
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         zoom={14}
         center={mapCenter}
+        onClick={handleMapClick}
+        onLoad={(map) => setMapInstance(map)}
         options={{
           disableDefaultUI: false,
           zoomControl: true,
@@ -118,54 +134,30 @@ export default function Map() {
           fullscreenControl: false
         }}
       >
-        {/* 시설 마커 */}
         {facilities.map((facility) => (
-          <Marker
+          <CustomMarker
             key={facility.id}
-            position={facility.location}
-            onClick={() => handleMarkerClick(facility)}
-            icon={{
-              path: google.maps.SymbolPath.CIRCLE,
-              fillColor: markerColors[facility.category],
-              fillOpacity: 0.7,
-              strokeWeight: 2,
-              scale: 10
-            }}
+            facility={facility}
+            onSelect={() => setSelectedFacility(facility)}
           />
         ))}
-
-        {/* 선택된 시설 정보창 */}
+        
         {selectedFacility && (
           <InfoWindow
-            position={selectedFacility.location}
-            onCloseClick={() => setSelectedFacility(null)}
-          >
-            <div className="p-4">
-              <h3 className="text-lg font-bold mb-2">{selectedFacility.name}</h3>
-              <p className="text-gray-600 mb-2">{selectedFacility.address}</p>
-              {userLocation && (
-                <p className="mb-2">
-                  거리: {calculateDistance(selectedFacility.location)}km
-                </p>
-              )}
-            </div>
-          </InfoWindow>
-        )}
-
-        {/* 사용자 위치 마커 */}
-        {userLocation && (
-          <Marker
-            position={userLocation.toJSON()}
-            icon={{
-              path: google.maps.SymbolPath.CIRCLE,
-              fillColor: '#4285F4',
-              fillOpacity: 1,
-              strokeWeight: 2,
-              scale: 8
-            }}
+            facility={selectedFacility}
+            onClose={() => setSelectedFacility(null)}
           />
         )}
       </GoogleMap>
+
+      <AddFacilityModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setClickedLocation(null)
+        }}
+        onSubmit={handleAddFacility}
+      />
     </div>
   )
 }
