@@ -4,7 +4,7 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="text-center text-gray-600">
           <p className="text-sm mb-1">
-            © {new Date().getFullYear()} Isabelle Choi
+            © {new Date().getFullYear()} syurose99
           </p>
           <div className="text-sm space-x-4">
             <span>긴급연락처:</span>
