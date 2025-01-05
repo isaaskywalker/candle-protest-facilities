@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api'
-import { getDatabase, ref, onValue, push, set } from 'firebase/database'
+import { getDatabase, ref, onValue, push } from 'firebase/database'
 import { v4 as uuidv4 } from 'uuid'
 import CustomMarker from './Marker'
 import InfoWindow from './InfoWindow'
+import SearchBox from './SearchBox'
 import AddFacilityModal from '../UI/AddFacilityModal'
 import type { Facility, Location } from '@/types'
 import { database } from '@/lib/firebase'
@@ -18,20 +19,23 @@ const defaultCenter = {
   lng: 126.9780
 }
 
+const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places"]
+
 export default function Map() {
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
   const [clickedLocation, setClickedLocation] = useState<Location | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [userLocation, setUserLocation] = useState<google.maps.LatLng | null>(null)
+  const [mapCenter, setMapCenter] = useState(defaultCenter)
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries
   })
 
   useEffect(() => {
-    // 시설 데이터 가져오기
     const facilitiesRef = ref(database, 'facilities')
     const unsubscribe = onValue(facilitiesRef, (snapshot) => {
       const data = snapshot.val()
@@ -41,31 +45,21 @@ export default function Map() {
       }
     })
 
-    // 사용자 위치 가져오기
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation(new google.maps.LatLng(
-            position.coords.latitude,
-            position.coords.longitude
-          ))
-        }
-      )
-    }
-
     return () => unsubscribe()
   }, [])
 
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return
-    
-    const newLocation = {
-      lat: e.latLng.lat(),
-      lng: e.latLng.lng()
+  const handlePlacesChanged = useCallback((location: google.maps.LatLng) => {
+    const newCenter = {
+      lat: location.lat(),
+      lng: location.lng()
     }
-    
-    setClickedLocation(newLocation)
-    setIsAddModalOpen(true)
+    setMapCenter(newCenter)
+    mapInstance?.panTo(newCenter)
+    mapInstance?.setZoom(16)
+  }, [mapInstance])
+
+  const onMapLoad = (map: google.maps.Map) => {
+    setMapInstance(map)
   }
 
   const handleAddFacility = async (data: Omit<Facility, 'id' | 'location' | 'population'>) => {
@@ -88,16 +82,27 @@ export default function Map() {
 
   return (
     <div className="relative w-full h-full">
+      <SearchBox onPlacesChanged={handlePlacesChanged} />
+      
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         zoom={14}
-        center={userLocation?.toJSON() || defaultCenter}
-        onClick={handleMapClick}
+        center={mapCenter}
+        onClick={(e) => {
+          if (!e.latLng) return
+          setClickedLocation({
+            lat: e.latLng.lat(),
+            lng: e.latLng.lng()
+          })
+          setIsAddModalOpen(true)
+        }}
+        onLoad={onMapLoad}
         options={{
           disableDefaultUI: false,
           zoomControl: true,
           mapTypeControl: false,
-          streetViewControl: false
+          streetViewControl: false,
+          fullscreenControl: false
         }}
       >
         {facilities.map((facility) => (
