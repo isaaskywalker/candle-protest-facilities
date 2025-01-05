@@ -56,7 +56,10 @@ export default function CategoryList({ facilities, onSelectFacility }: CategoryL
                 {filteredFacilities.map((facility) => (
                   <li 
                     key={facility.id}
-                    onClick={() => onSelectFacility(facility)}
+                    onClick={() => {
+                      onSelectFacility(facility)
+                      setIsListOpen(false)
+                    }}
                     className="p-2 hover:bg-gray-50 rounded cursor-pointer"
                   >
                     <p className="font-medium">{facility.name}</p>
