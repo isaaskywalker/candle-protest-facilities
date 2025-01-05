@@ -1,8 +1,13 @@
+# src/types/index.ts
 export type FacilityCategory = '화장실' | '음식' | '지하철'
 
 export interface Location {
   lat: number
   lng: number
+}
+
+export interface UserLocation extends Location {
+  timestamp?: number
 }
 
 export interface Facility {
