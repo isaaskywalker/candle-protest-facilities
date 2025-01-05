@@ -1,4 +1,3 @@
-# src/components/Map/index.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -55,23 +54,7 @@ export default function Map() {
             position.coords.latitude,
             position.coords.longitude
           )
-          
-          // 서울 지역 확인 (대략적인 범위)
-          const seoulBounds = {
-            north: 37.7010,
-            south: 37.4283,
-            east: 127.1830,
-            west: 126.7794
-          }
-
-          if (
-            position.coords.latitude >= seoulBounds.south &&
-            position.coords.latitude <= seoulBounds.north &&
-            position.coords.longitude >= seoulBounds.west &&
-            position.coords.longitude <= seoulBounds.east
-          ) {
-            setUserLocation(newUserLocation)
-          }
+          setUserLocation(newUserLocation)
         },
         (error) => {
           console.error('위치 정보를 가져올 수 없습니다:', error)
@@ -94,24 +77,6 @@ export default function Map() {
     return () => unsubscribe()
   }, [])
 
-  // 사용자와 시설 사이의 거리 계산
-  const calculateDistance = (facilityLocation: { lat: number; lng: number }) => {
-    if (!userLocation) return null
-
-    const userLatLng = userLocation
-    const facilityLatLng = new google.maps.LatLng(
-      facilityLocation.lat,
-      facilityLocation.lng
-    )
-
-    const distance = google.maps.geometry.spherical.computeDistanceBetween(
-      userLatLng,
-      facilityLatLng
-    )
-
-    return (distance / 1000).toFixed(1) // km 단위로 변환
-  }
-
   if (!isLoaded) return null
 
   return (
@@ -125,17 +90,9 @@ export default function Map() {
           zoomControl: true,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: false,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            }
-          ]
+          fullscreenControl: false
         }}
       >
-        {/* 시설 마커 표시 */}
         {facilities.map((facility) => (
           <CustomMarker
             key={facility.id}
@@ -144,30 +101,10 @@ export default function Map() {
           />
         ))}
         
-        {/* 선택된 시설 정보창 */}
         {selectedFacility && (
           <InfoWindow
-            facility={{
-              ...selectedFacility,
-              distance: calculateDistance(selectedFacility.location)
-            }}
+            facility={selectedFacility}
             onClose={() => setSelectedFacility(null)}
-          />
-        )}
-
-        {/* 사용자 위치 마커 */}
-        {userLocation && (
-          <CustomMarker
-            facility={{
-              id: 'user-location',
-              name: '내 위치',
-              category: '화장실',
-              location: userLocation.toJSON(),
-              population: 0,
-              address: ''
-            }}
-            onSelect={() => {}}
-            isUserLocation
           />
         )}
       </GoogleMap>
