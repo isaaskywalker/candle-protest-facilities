@@ -1,4 +1,3 @@
-# src/components/Map/InfoWindow.tsx
 'use client'
 
 import { InfoWindow as GoogleInfoWindow } from '@react-google-maps/api'
@@ -51,12 +50,13 @@ export default function InfoWindow({ facility, onClose }: InfoWindowProps) {
           </button>
         </div>
         <p className="text-gray-600 mb-2">{facility.address}</p>
-        <p className="mb-2">
-          인구 밀집도: <span className="font-medium">{facility.population || 0}명</span>
-        </p>
+        <div className="flex justify-between items-center mb-2">
+          <span>인구 밀집도:</span>
+          <span className="font-medium">{facility.population || 0}명</span>
+        </div>
         <button
           onClick={handleUse}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors w-full"
+          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
         >
           사용
         </button>
